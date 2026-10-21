@@ -1,0 +1,13 @@
+services:
+  pilot:
+    build: .
+    image: explanation-drift-pilot:1.0
+    container_name: explanation-drift-pilot
+    ports:
+      - "8000:8000"
+    volumes:
+      - pilot-runs:/app/runs   # keeps past runs and reports between restarts
+    restart: unless-stopped
+
+volumes:
+  pilot-runs:

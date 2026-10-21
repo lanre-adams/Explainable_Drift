@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explanation-Drift Pilot</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1b2333;--muted:#5f6b7d;--line:#e1e5eb;--navy:#1f3864;--accent:#1f4e79;--good:#2e7d32;--bad:#c0392b;--chip:#eef2f7}
+@media (prefers-color-scheme:dark){:root{--bg:#11151c;--card:#1a202a;--ink:#e6e9ef;--muted:#9aa5b5;--line:#2b3442;--navy:#9db8e8;--accent:#7fb0e6;--chip:#232b38}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:20px 24px 8px}h1{margin:0;font-size:21px;color:var(--navy)}header p{margin:4px 0 0;color:var(--muted);max-width:900px}
+main{display:grid;grid-template-columns:320px 1fr;gap:16px;padding:16px 24px 40px}
+@media (max-width:900px){main{grid-template-columns:1fr;padding:12px 16px}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+h2{font-size:15px;margin:0 0 10px;color:var(--navy)}h3{font-size:13px;margin:14px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+label{display:block;font-size:12.5px;color:var(--muted);margin:10px 0 3px}
+input[type=number],select{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.checks label{display:inline-flex;gap:6px;align-items:center;margin-right:12px;color:var(--ink)}
+.presets{display:flex;gap:6px;flex-wrap:wrap}.presets button{flex:1}
+button{border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:7px 10px;border-radius:6px;font:inherit;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;width:100%;padding:10px;margin-top:14px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.est{font-size:12.5px;color:var(--muted);margin-top:8px}
+.bar{height:8px;background:var(--chip);border-radius:4px;overflow:hidden;margin:8px 0}.bar>div{height:100%;background:var(--accent);width:0;transition:width .4s}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}@media (max-width:700px){.kpis{grid-template-columns:1fr 1fr}}
+.kpi{background:var(--chip);border-radius:8px;padding:10px 12px}.kpi b{display:block;font-size:20px}.kpi span{font-size:12px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}
+th{font-size:12px;color:var(--muted);font-weight:600}tr.best td{font-weight:600}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}@media (max-width:1100px){.charts{grid-template-columns:1fr}}
+.chartbox{position:relative;height:290px}.note{font-size:12px;color:var(--muted);margin-top:6px}
+.dl{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.dl a{text-decoration:none;color:#fff;background:var(--navy);padding:8px 12px;border-radius:6px;font-weight:600;font-size:13px}
+@media (prefers-color-scheme:dark){.dl a{color:#11151c}}
+.dl a.alt{background:var(--chip);color:var(--ink)}
+.runs{list-style:none;padding:0;margin:0;font-size:12.5px;max-height:260px;overflow:auto}.runs li{padding:6px 4px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;justify-content:space-between;gap:6px}
+.runs li:hover{background:var(--chip)}.pill{font-size:11px;padding:1px 7px;border-radius:9px;background:var(--chip)}
+.pill.done{color:var(--good)}.pill.error{color:var(--bad)}.empty{color:var(--muted);padding:40px 0;text-align:center}
+.seg{display:inline-flex;gap:4px;margin-bottom:6px}.seg button{padding:3px 8px;font-size:12px}.seg button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.interp{background:var(--chip);border-left:3px solid var(--accent);padding:10px 12px;border-radius:6px;margin-top:12px;font-size:13.5px}
+.err{color:var(--bad)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Explanation-Drift Pilot</h1>
+  <p>Can label-free monitors tell when an intrusion detector is <em>failing</em>, without raising alarms when traffic merely <em>changes</em>? Train an XGBoost detector on NSL-KDD, simulate harmful and harmless drift, and compare five monitors. All results are computed live.</p>
+</header>
+<main>
+  <aside>
+    <div class="card">
+      <h2>Configure a run</h2>
+      <div class="presets">
+        <button data-preset="quick">Quick</button><button data-preset="standard">Standard</button><button data-preset="full">Full</button>
+      </div>
+      <div class="row2">
+        <div><label for="seeds">Seeds</label><input id="seeds" type="number" min="1" max="10"></div>
+        <div><label for="reps">Repetitions</label><input id="reps" type="number" min="1" max="10"></div>
+      </div>
+      <div class="row2">
+        <div><label for="window_size">Window size</label><input id="window_size" type="number" min="200" max="3000" step="100"></div>
+        <div><label for="mix_steps">Mixing steps</label><input id="mix_steps" type="number" min="2" max="20"></div>
+      </div>
+      <label>Shifted test sets (harmful drift)</label>
+      <div class="checks"><label><input type="checkbox" value="KDDTest+" name="ts">KDDTest+</label><label><input type="checkbox" value="KDDTest-21" name="ts">KDDTest-21</label></div>
+      <div class="row2">
+        <div><label for="fail_threshold">Failure threshold (%)</label><input id="fail_threshold" type="number" min="0.5" max="50" step="0.5"></div>
+        <div><label for="conformal_alpha">Conformal α</label><input id="conformal_alpha" type="number" min="0.001" max="0.5" step="0.01"></div>
+      </div>
+      <div class="row2">
+        <div><label for="n_estimators">Trees</label><input id="n_estimators" type="number" min="20" max="1000" step="10"></div>
+        <div><label for="max_depth">Max depth</label><input id="max_depth" type="number" min="2" max="12"></div>
+      </div>
+      <div class="est" id="est"></div>
+      <button class="primary" id="run">Run analysis</button>
+      <div id="prog" hidden><div class="bar"><div id="barfill"></div></div><div class="est" id="progmsg"></div></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>Previous runs</h2>
+      <ul class="runs" id="runs"><li class="empty" style="cursor:default">No runs yet</li></ul>
+    </div>
+  </aside>
+  <section class="card" id="results"><div class="empty">Choose a preset and press <b>Run analysis</b>. A quick run takes about a minute.</div></section>
+</main>
+<script src="chart.umd.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const PRESETS={quick:{seeds:1,reps:2,mix_steps:5,window_size:1000},standard:{seeds:3,reps:4,mix_steps:10,window_size:1000},full:{seeds:5,reps:4,mix_steps:10,window_size:1000}};
+const COLORS={INPUT:"#7F7F7F",EXPL:"#C55A11",EXPLc:"#1F4E79",CONF:"#548235",CONFORM:"#7030A0"};
+const DARK=matchMedia("(prefers-color-scheme: dark)").matches; if(DARK){COLORS.EXPLc="#6fa8dc";COLORS.CONFORM="#b48ad8";COLORS.INPUT="#aaaaaa"}
+Chart.defaults.color=getComputedStyle(document.documentElement).getPropertyValue("--muted");Chart.defaults.borderColor=getComputedStyle(document.documentElement).getPropertyValue("--line");
+let defaults, charts=[], poll=null, current=null, harmSet=null;
+const pct=(v,d=1)=>v==null?"–":(v*100).toFixed(d)+"%", f3=v=>v==null?"–":v.toFixed(3);
+
+function cfgFromForm(){return{seeds:+$("#seeds").value,reps:+$("#reps").value,window_size:+$("#window_size").value,mix_steps:+$("#mix_steps").value,
+  test_sets:[...document.querySelectorAll("input[name=ts]:checked")].map(e=>e.value),fail_threshold:+$("#fail_threshold").value/100,
+  conformal_alpha:+$("#conformal_alpha").value,n_estimators:+$("#n_estimators").value,max_depth:+$("#max_depth").value,
+  benign_shares:defaults.benign_shares,reference_size:defaults.reference_size}}
+function fill(c){for(const k of["seeds","reps","window_size","mix_steps","conformal_alpha","n_estimators","max_depth"])if(c[k]!=null)$("#"+k).value=c[k];
+  if(c.fail_threshold!=null)$("#fail_threshold").value=+(c.fail_threshold*100).toFixed(2);
+  if(c.test_sets)document.querySelectorAll("input[name=ts]").forEach(e=>e.checked=c.test_sets.includes(e.value));estimate()}
+async function estimate(){try{const r=await(await fetch("api/estimate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(cfgFromForm())})).json();
+  const m=Math.max(1,Math.round(r.seconds/60));$("#est").textContent=`${r.windows.toLocaleString()} monitoring windows · about ${m} min`}catch(e){}}
+document.querySelectorAll("[data-preset]").forEach(b=>b.onclick=()=>fill(PRESETS[b.dataset.preset]));
+document.querySelectorAll("input").forEach(i=>i.addEventListener("change",estimate));
+
+$("#run").onclick=async()=>{const r=await(await fetch("api/runs",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(cfgFromForm())})).json();
+  watch(r.id);loadRuns()};
+function watch(id){current=id;clearInterval(poll);$("#run").disabled=true;$("#prog").hidden=false;
+  const tick=async()=>{const j=await(await fetch("api/runs/"+id)).json();const p=j.total?Math.round(100*j.done/j.total):0;
+    $("#barfill").style.width=p+"%";$("#progmsg").textContent=`${p}% · ${j.message}`;
+    if(j.status==="done"){clearInterval(poll);$("#run").disabled=false;$("#prog").hidden=true;render(j);loadRuns()}
+    if(j.status==="error"){clearInterval(poll);$("#run").disabled=false;$("#progmsg").innerHTML=`<span class=err>${j.message}</span>`;loadRuns()}};
+  tick();poll=setInterval(tick,1500)}
+async function loadRuns(){const rs=await(await fetch("api/runs")).json();const ul=$("#runs");if(!rs.length)return;
+  ul.innerHTML=rs.map(r=>`<li data-id="${r.id}"><span>${r.id}<br><small style="color:var(--muted)">${r.config.seeds} seed(s) · ${r.total} windows</small></span><span class="pill ${r.status}">${r.status}</span></li>`).join("");
+  ul.querySelectorAll("li").forEach(li=>li.onclick=async()=>{const j=await(await fetch("api/runs/"+li.dataset.id)).json();
+    if(j.status==="done"){fill(j.config);render(j)}else if(j.status==="running"||j.status==="queued")watch(j.id)})}
+
+function render(j){const R=j.results,c=R.config,d=R.detector,M=R.monitors;charts.forEach(x=>x.destroy());charts=[];
+  const score=m=>(m.auroc||0)-(m.false_alarm||0);const best=[...M].sort((a,b)=>score(b)-score(a))[0];
+  const by=Object.fromEntries(M.map(m=>[m.key,m]));const worst=d.worst_harmful.map(w=>`${pct(w.error)} <small>(${w.test_set})</small>`).join("<br>");
+  harmSet=c.test_sets[0];
+  $("#results").innerHTML=`
+  <h2>Results · run ${j.id}</h2>
+  <div class="kpis">
+    <div class="kpi"><b>${pct(d.val_error,2)}</b><span>Detector error, in-distribution</span></div>
+    <div class="kpi"><b style="font-size:16px">${worst}</b><span>Error at 100% shifted data</span></div>
+    <div class="kpi"><b>${pct(d.benign_true_error_max)}</b><span>Max true error, harmless windows</span></div>
+    <div class="kpi"><b>${R.n_windows.harmful+R.n_windows.harmless}</b><span>Windows · ${Math.round(R.elapsed_s)} s</span></div>
+  </div>
+  <table><thead><tr><th>Monitor</th><th>Rank corr. (harmful)</th><th>AUROC failing vs healthy</th><th>False alarms, harmless</th><th>Est. error, harmless</th><th>Cost / window</th></tr></thead>
+  <tbody>${M.map(m=>`<tr class="${m.key===best.key?"best":""}"><td><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${COLORS[m.key]};margin-right:6px"></span>${m.label}</td>
+    <td>${f3(m.rho)}</td><td>${f3(m.auroc)}${c.seeds>1?` <small style="color:var(--muted)">(${f3(m.auroc_lo)}–${f3(m.auroc_hi)})</small>`:""}</td>
+    <td>${pct(m.false_alarm)}</td><td>${pct(m.benign_est_error)}</td><td>${m.ms_per_window>=1?m.ms_per_window.toFixed(0):m.ms_per_window.toFixed(2)} ms</td></tr>`).join("")}</tbody></table>
+  <div class="note">“Failing” = window error above ${pct(c.fail_threshold)}. Bold row = best balance of AUROC and false alarms. Explanation monitors include TreeSHAP time (${R.timing_ms.shap.toFixed(0)} ms per window).</div>
+  <div class="interp">Class-conditional explanation drift: <b>${pct(by.EXPLc.false_alarm)}</b> false alarms, AUROC <b>${f3(by.EXPLc.auroc)}</b>. Confidence: <b>${pct(by.CONF.false_alarm)}</b>, AUROC <b>${f3(by.CONF.auroc)}</b>. Conformal: <b>${pct(by.CONFORM.false_alarm)}</b>, AUROC <b>${f3(by.CONFORM.auroc)}</b>.
+   ${(()=>{const e=by.EXPLc.auroc||0,c=Math.max(by.CONF.auroc||0,by.CONFORM.auroc||0),cost=(by.EXPLc.ms_per_window/Math.max(by.CONF.ms_per_window,0.01));
+     return Math.abs(e-c)<0.01?`Explanations match but do not clearly beat the cheaper confidence-based monitors here, at roughly ${Math.round(cost).toLocaleString()}× the cost. Whether they add value under evasion attacks is the open question the PhD addresses.`:
+     (e>c?"Explanations outperform the confidence-based monitors on this configuration.":"The confidence-based monitors outperform explanations on this configuration.")})()}</div>
+  <div class="charts">
+    <div><h3>Harmful drift: silent failure</h3><div class="seg" id="seg">${c.test_sets.map(t=>`<button data-t="${t}" class="${t===harmSet?"on":""}">${t}</button>`).join("")}</div><div class="chartbox"><canvas id="c1"></canvas></div>
+      <div class="note">Detector error and false-positive rate as shifted data are mixed in. No labels are available to reveal this in deployment.</div></div>
+    <div><h3>Harmless drift: false alarms</h3><div class="chartbox"><canvas id="c2"></canvas></div><div class="note">Only the attack share changes; true error stays near zero. Estimates above the dashed line are false alarms.</div></div>
+    <div><h3>Monitors track harmful drift</h3><div class="chartbox"><canvas id="c3"></canvas></div><div class="note">Each monitor's estimated error against true error, harmful-drift windows (${harmSet}).</div></div>
+    <div><h3>Detection vs false alarms</h3><div class="chartbox"><canvas id="c4"></canvas></div><div class="note">Good monitors have a tall blue bar (detect failing windows) and a short orange bar (few false alarms on harmless ones).</div></div>
+  </div>
+  <h3>Download</h3>
+  <div class="dl"><a href="api/runs/${j.id}/report.pdf">PDF report</a><a class="alt" href="api/runs/${j.id}/windows.csv">Per-window CSV</a><a class="alt" href="api/runs/${j.id}/results.json">Results JSON</a></div>`;
+  drawHarm(R);drawBenign(R);drawTrack(R);drawTrade(R);
+  document.querySelectorAll("#seg button").forEach(b=>b.onclick=()=>{harmSet=b.dataset.t;document.querySelectorAll("#seg button").forEach(x=>x.classList.toggle("on",x===b));
+    charts[0].destroy();charts[2].destroy();charts[0]=mkHarm(R);charts[2]=mkTrack(R)})}
+
+const base=(x,y)=>({responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{labels:{boxWidth:10,font:{size:11}}},
+  tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${(+c.parsed.y).toFixed(2)}%`}}},scales:{x:{title:{display:true,text:x}},y:{title:{display:true,text:y},beginAtZero:true}}});
+function mkHarm(R){const d=R.harm_curve.filter(r=>r.test_set===harmSet);const th=R.config.fail_threshold*100;
+  return new Chart($("#c1"),{type:"line",data:{labels:d.map(r=>Math.round(r.share*100)),datasets:[
+    {label:"Error",data:d.map(r=>r.error*100),borderColor:COLORS.EXPLc,backgroundColor:COLORS.EXPLc,tension:.2},
+    {label:"False-positive rate",data:d.map(r=>r.fpr*100),borderColor:COLORS.EXPL,backgroundColor:COLORS.EXPL,borderDash:[5,4],tension:.2},
+    {label:"Failure threshold",data:d.map(()=>th),borderColor:"#999",borderDash:[2,3],pointRadius:0,borderWidth:1}]},options:base("Shifted share of window (%)","%")})}
+function drawHarm(R){charts[0]=mkHarm(R)}
+function drawBenign(R){const d=R.benign_curve,th=R.config.fail_threshold*100;
+  charts[1]=new Chart($("#c2"),{type:"line",data:{labels:d.map(r=>Math.round(r.share*100)),datasets:[
+    ...R.monitors.map(m=>({label:m.label,data:d.map(r=>r["est_"+m.key]*100),borderColor:COLORS[m.key],backgroundColor:COLORS[m.key],tension:.2})),
+    {label:"True error",data:d.map(r=>r.error*100),borderColor:DARK?"#fff":"#000",borderDash:[2,3],pointRadius:0},
+    {label:"Failure threshold",data:d.map(()=>th),borderColor:"#999",borderDash:[6,4],pointRadius:0,borderWidth:1}]},options:base("Attack share of window (%)","Estimated error (%)")})}
+function mkTrack(R){const d=R.harm_curve.filter(r=>r.test_set===harmSet);
+  return new Chart($("#c3"),{type:"line",data:{labels:d.map(r=>Math.round(r.share*100)),datasets:[
+    {label:"True error",data:d.map(r=>r.error*100),borderColor:DARK?"#fff":"#000",borderWidth:2.5,pointRadius:0},
+    ...R.monitors.map(m=>({label:m.label,data:d.map(r=>r["est_"+m.key]*100),borderColor:COLORS[m.key],backgroundColor:COLORS[m.key],borderWidth:1.4,pointRadius:2,tension:.2}))]},
+    options:base("Shifted share of window (%)","Error (%)")})}
+function drawTrack(R){charts[2]=mkTrack(R)}
+function drawTrade(R){const L=R.monitors.map(m=>m.label.replace("Explanation drift","Expl. drift"));
+  charts[3]=new Chart($("#c4"),{type:"bar",data:{labels:L,datasets:[
+    {label:"AUROC × 100 (higher is better)",data:R.monitors.map(m=>(m.auroc||0)*100),backgroundColor:DARK?"#6fa8dc":"#1F4E79"},
+    {label:"False alarms on harmless windows, % (lower is better)",data:R.monitors.map(m=>(m.false_alarm||0)*100),backgroundColor:"#C55A11"}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{boxWidth:10,font:{size:11}}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y.toFixed(1)}`}}},
+  scales:{y:{min:0,max:100},x:{ticks:{font:{size:10},maxRotation:0,autoSkip:false,callback:function(v){const s=this.getLabelForValue(v);return s.length>18?s.split(", "):s}}}}}})}
+(async()=>{defaults=(await(await fetch("api/defaults")).json()).config;fill({...defaults,...PRESETS.quick});await loadRuns();
+  const rs=await(await fetch("api/runs")).json();const live=rs.find(r=>r.status==="running"||r.status==="queued");const last=rs.find(r=>r.status==="done");
+  if(live)watch(live.id);else if(last){const j=await(await fetch("api/runs/"+last.id)).json();render(j)}})();
+</script>
+</body>
+</html>
